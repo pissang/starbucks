@@ -34,7 +34,7 @@
                 background: #fff;
                 box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 
-                transition: transform 0.5s ease-in;
+                transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
                 transform: translate(100%);
                 overflow-y: scroll;
             }
@@ -45,14 +45,15 @@
 
             #detail {
                 padding: 10px;
+                padding-top: 40px;
             }
 
-            #detail h5 {
+            #property-list h5 {
                 margin: 3px 0;
                 color: #888;
             }
 
-            #detail .item {
+            #property-list .item {
                 margin: 10px 0;
             }
 
@@ -63,7 +64,7 @@
                 border: none;
                 background: #fff;
                 box-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
-                border-radius: 4px;
+                border-radius: 10px 2px 2px 10px;
 
                 cursor: pointer;
                 font-size: 16px;
@@ -97,6 +98,15 @@
                 z-index: 100;
                 margin-top: 10px;
             }
+            #bmap {
+                height: 300px;
+            }
+            #detail .close {
+                position: absolute;
+                right: 10px;
+                top: 10px;
+                cursor: pointer;
+            }
         </style>
     </head>
     <body>
@@ -108,10 +118,16 @@
             <div id="world-map"></div>
             <div id="country-map"></div>
         </div>
-        <div id="detail"></div>
+        <div id="detail">
+            <div id="bmap"></div>
+            <div id="property-list"></div>
+            <div class="close">X</div>
+        </div>
         <button id="back">Back</button>
         <!-- <div id="detail"></div> -->
+        <script src="http://api.map.baidu.com/api?v=2.0&ak=ZUONbpqGBsYGXNIYHicvbAbM"></script>
         <script src="dep/echarts.js"></script>
+        <script src="dep/bmap.js"></script>
         <script src="dep/world.js"></script>
         <script src="dep/jquery.min.js"></script>
         <script>
@@ -141,11 +157,6 @@
                         width: 2
                     }
                 },
-                // [-4.807092752889341, 39.95793467316419]
-                // [0.9171566610846824, 39.89718202295312]
-                // [5.507356662856305, 39.9376837897605]
-                // [9.287521370197643, 39.97818555656789]
-                // [14.822762548804599, 39.91743290635681]
                 'France': {
                     'Guadeloupe': {
                         left: -4.8,
@@ -194,9 +205,30 @@
                 }
             };
 
+            // 使用百度地图的国家
+            var useBMap = {
+                'China': true
+            };
 
             var worldMapChart = echarts.init($('#world-map')[0]);
             var countryMapChart = echarts.init($('#country-map')[0]);
+            var bmapChart = echarts.init($('#bmap')[0]);
+            // Init an empty bmap
+            bmapChart.setOption({
+                animation: false,
+                bmap: {
+                    center: [104.114129, 37.550339],
+                    zoom: 5,
+                    roam: true
+                },
+                series: [{
+                    type: 'scatter',
+                    coordinateSystem: 'bmap',
+                    symbol: 'pin',
+                    symbolSize: 30,
+                    data: []
+                }]
+            });
 
             worldMapChart.setOption({
                 backgroundColor: '#404a59',
@@ -337,7 +369,7 @@
                     });
             });
 
-            $('#back').on('click', function () {
+            $('#back').click(function () {
                 $('#back').hide();
                 $('#detail').removeClass('active');
 
@@ -351,25 +383,24 @@
                 });
             });
 
-            countryMapChart.on('click', function (params) {
-                if (params.data && params.data.raw) {
-                    $('#detail').addClass('active');
-
-                    var html = '';
-                    for (var name in params.data.raw) {
-                        if (params.data.raw[name]) {
-                            html += '<div class="item">';
-                            html += '<h5>' + name + '</h5>';
-                            html += params.data.raw[name];
-                            html += '</div>';
-                        }
-                    }
-                    $('#detail').html(html);
-                }
+            $('#detail .close').click(function () {
+                $('#detail').removeClass('active');
             });
 
             function showScatter() {
                 var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
+                var data = starbucksData.filter(function (item) {
+                    var country = item.country;
+                    if (nameMap[country]) {
+                        country = nameMap[country];
+                    }
+                    return country === geo.map;
+                }).map(function (item) {
+                    return {
+                        value: [+item.Longitude, +item.Latitude],
+                        raw: item
+                    };
+                });
                 countryMapChart.setOption({
                     series: [{
                         type: 'scatter',
@@ -382,27 +413,81 @@
                                 borderWidth: 2
                             }
                         },
-                        data: starbucksData.filter(function (item) {
-                            var country = item.country;
-                            if (nameMap[country]) {
-                                country = nameMap[country];
-                            }
-                            return country === geo.map;
-                        }).map(function (item) {
-                            return {
-                                value: [+item.Longitude, +item.Latitude],
-                                raw: item
-                            };
-                        })
+                        data: data
                     }]
                 });
+                if (useBMap[geo.map]) {
+                    bmapChart.setOption({
+                        bmap: {
+                            center: data[0].value,
+                            zoom: 15
+                        },
+                        series: [{
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: function (params) {
+                                        return params.data.raw.Name;
+                                    }
+                                },
+                                emphasis: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: function (params) {
+                                        return params.data.raw.Name;
+                                    }
+                                }
+                            },
+                            data: data
+                        }]
+                    });
+                }
             }
 
-            countryMapChart.getZr().on('click', function (e) {
-                var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
-                var coord = geo.pointToData([e.offsetX, e.offsetY]);
-                console.log(coord);
-            });
+            function showDetail(params) {
+                if (params.data && params.data.raw) {
+                    $('#detail').addClass('active');
+
+                    var html = '';
+                    for (var name in params.data.raw) {
+                        if (params.data.raw[name]) {
+                            html += '<div class="item">';
+                            html += '<h5>' + name + '</h5>';
+                            html += params.data.raw[name];
+                            html += '</div>';
+                        }
+                    }
+                    $('#property-list').html(html);
+
+                    // Zoom bmap
+                    var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
+
+                    if (useBMap[geo.map]) {
+                        bmapChart.setOption({
+                            bmap: {
+                                center: params.value,
+                                zoom: 15
+                            },
+                            series: [{
+                                show: true
+                            }]
+                        });
+                        $('#bmap').show();
+                    }
+                    else {
+                        $('#bmap').hide();
+                    }
+                }
+            }
+            countryMapChart.on('click', showDetail);
+            bmapChart.on('click', showDetail);
+
+            // countryMapChart.getZr().on('click', function (e) {
+            //     var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
+            //     var coord = geo.pointToData([e.offsetX, e.offsetY]);
+            //     console.log(coord);
+            // });
 
             // function mockData(geo) {
             //     var data = [];
@@ -434,14 +519,17 @@
                     // Find country
                     var region = worldGeo.getRegionByCoord([lng, lat]);
                     if (region) {
-                        obj.country = region.name;
-                        // if (nameMap[obj.country]) {
-                        //     obj.country = nameMap[obj.country];
-                        // }
-                    }
+                        obj.country = region.name;                    }
                     return obj;
                 });
             }
+
+            $(window).resize(function () {
+                worldMapChart.resize();
+                if ($(countryMapChart.getDom).is(':visible')) {
+                    countryMapChart.resize();
+                }
+            });
         </script>
     </body>
 </html>
