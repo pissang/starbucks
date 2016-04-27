@@ -115,13 +115,71 @@
         <script src="dep/world.js"></script>
         <script src="dep/jquery.min.js"></script>
         <script>
-            var worldMapChart = echarts.init($('#world-map')[0]);
-            var countryMapChart = echarts.init($('#country-map')[0]);
+            // Some configuration
             var nameMap = {
                 'Iran': 'Islamic Republic of Iran',
                 'United States of America': 'USA',
                 'Democratic Republic of the Congo': 'Congo-Brazzaville',
                 'Republic of the Congo': 'Congo-Kinshasa'
+            };
+
+            var specialAreas = {
+                'USA': {
+                    Alaska: {              // 把阿拉斯加移到美国主大陆左下方
+                        left: -131,
+                        top: 25,
+                        width: 15
+                    },
+                    Hawaii: {
+                        left: -110,        // 夏威夷
+                        top: 28,
+                        width: 5
+                    },
+                    'Puerto Rico': {       // 波多黎各
+                        left: -76,
+                        top: 26,
+                        width: 2
+                    }
+                },
+                // [-4.807092752889341, 39.95793467316419]
+                // [0.9171566610846824, 39.89718202295312]
+                // [5.507356662856305, 39.9376837897605]
+                // [9.287521370197643, 39.97818555656789]
+                // [14.822762548804599, 39.91743290635681]
+                'France': {
+                    'Guadeloupe': {
+                        left: -4.8,
+                        top: 37,
+                        width: 1
+                    },
+                    'Martinique': {
+                        left: -1,
+                        top: 37,
+                        width: 1
+                    },
+                    'French Guiana': {
+                        left: 3.2,
+                        top: 37,
+                        width: 2
+                    },
+                    'Mayotte': {
+                        left: 9,
+                        top: 37,
+                        width: 1
+                    },
+                    'Réunion': {
+                        left: 11,
+                        top: 37,
+                        width: 1.5
+                    }
+                }
+            };
+
+            var specialCenterAndZoom = {
+                'Russia': {
+                    center: [103.69826459654769, 60.10460028011932],
+                    zoom: 2
+                }
             };
 
             var mapStyle = {
@@ -135,6 +193,10 @@
                     borderWidth: 0
                 }
             };
+
+
+            var worldMapChart = echarts.init($('#world-map')[0]);
+            var countryMapChart = echarts.init($('#country-map')[0]);
 
             worldMapChart.setOption({
                 backgroundColor: '#404a59',
@@ -237,7 +299,7 @@
                         countryMapChart.hideLoading();
                         countryMapChart.resize();
 
-                        echarts.registerMap(name, geoJson);
+                        echarts.registerMap(name, geoJson, specialAreas[name]);
                         countryMapChart.setOption({
                             backgroundColor: '#404a59',
                             animation: false,
@@ -264,7 +326,9 @@
                                             color: '#404a59'
                                         }
                                     }
-                                }
+                                },
+                                center: specialCenterAndZoom[name] && specialCenterAndZoom[name].center,
+                                zoom: specialCenterAndZoom[name] && specialCenterAndZoom[name].zoom
                             },
                             series: []
                         }, true);
@@ -333,6 +397,12 @@
                     }]
                 });
             }
+
+            countryMapChart.getZr().on('click', function (e) {
+                var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
+                var coord = geo.pointToData([e.offsetX, e.offsetY]);
+                console.log(coord);
+            });
 
             // function mockData(geo) {
             //     var data = [];
