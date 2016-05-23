@@ -348,6 +348,7 @@
                                 roam: true,
                                 map: name,
                                 itemStyle: mapStyle,
+                                selectedMode: 'single',
                                 label: {
                                     normal: {
                                         show: false
@@ -408,6 +409,10 @@
                         coordinateSystem: 'geo',
                         hoverAnimation: false,
                         itemStyle: {
+                            normal: {
+                                borderColor: '#333',
+                                borderWidth: 1
+                            },
                             emphasis: {
                                 borderColor: '#eee',
                                 borderWidth: 2
@@ -446,7 +451,18 @@
             }
 
             function showDetail(params) {
-                if (params.data && params.data.raw) {
+                var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
+
+                if (params.name) {
+                    var region = geo.getRegion(params.name);
+                    countryMapChart.setOption({
+                        geo: {
+                            center: region.center,
+                            zoom: 5
+                        }
+                    });
+                }
+                else if (params.data && params.data.raw) {
                     $('#detail').addClass('active');
 
                     var html = '';
@@ -460,10 +476,8 @@
                     }
                     $('#property-list').html(html);
 
-                    // Zoom bmap
-                    var geo = countryMapChart.getModel().getComponent('geo').coordinateSystem;
-
                     if (useBMap[geo.map]) {
+                        // Zoom bmap
                         bmapChart.setOption({
                             bmap: {
                                 center: params.value,
