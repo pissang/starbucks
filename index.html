@@ -233,6 +233,10 @@
             worldMapChart.setOption({
                 backgroundColor: '#404a59',
                 animationDurationUpdate: 800,
+                visualMap: {
+                    max: 3000,
+                    show: false
+                },
                 series: [{
                     type: 'map',
                     map: 'world',
@@ -272,7 +276,7 @@
                     for (var name in countryCount) {
                         var count = countryCount[name];
                         var textStyle = {
-                            color: '#bf465b',
+                            color: '#50d5d3',
                             fontWeight: 'bolder',
                             fontSize: Math.round(count / 500) + 20
                         };
@@ -418,6 +422,7 @@
                                 borderWidth: 2
                             }
                         },
+                        large: true,
                         data: data
                     }]
                 });
